@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { UseFormReturn } from "react-hook-form";
 import {
   Form,
@@ -14,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search, Check } from "lucide-react";
 import { AddressInput } from "@/components/ui/address-input";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 interface AddressFormProps {
   form: UseFormReturn<any>;
@@ -23,7 +23,8 @@ interface AddressFormProps {
 }
 
 export function AddressForm({ form, onAddressCheck, isChecking }: AddressFormProps) {
-  const [isUnique, setIsUnique] = useState(false);
+  const [isUnique, setIsUnique] = React.useState(false);
+  const [canCheck, setCanCheck] = React.useState(false);
 
   const handleAddressCheck = async () => {
     const street = form.getValues("address.street");
@@ -74,8 +75,8 @@ export function AddressForm({ form, onAddressCheck, isChecking }: AddressFormPro
     form.setValue("address.state", state);
     form.setValue("address.zipCode", zipCode);
 
-    // Automatically check address after autofill
-    handleAddressCheck();
+    // Check if all fields are filled before enabling the check button
+    setCanCheck(!!(street && city && state && zipCode));
   };
 
   return (
@@ -147,7 +148,7 @@ export function AddressForm({ form, onAddressCheck, isChecking }: AddressFormPro
           type="button" 
           variant={isUnique ? "outline" : "default"}
           onClick={handleAddressCheck}
-          disabled={isChecking}
+          disabled={isChecking || !canCheck}
           className={cn(
             "w-full sm:w-auto transition-colors",
             isUnique && "border-green-500 text-green-500 hover:bg-green-50 dark:hover:bg-green-950"

@@ -5,12 +5,23 @@ import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Upload, Copy, RefreshCw } from "lucide-react";
+import { Loader2, Upload, Copy, RefreshCw, Mail } from "lucide-react";
 import { extractPDFContent, type ParsedField } from '@/lib/pdf-parser';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from '@/lib/utils';
+
+type ViewMode = 'lender' | 'review';
 
 export default function PDFParsePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedFields, setExtractedFields] = useState<ParsedField[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('lender');
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -34,12 +45,110 @@ export default function PDFParsePage() {
     }
   });
 
-  const copyToClipboard = () => {
-    const formattedText = extractedFields
-      .map(({ name, value }) => `${name}: ${value}`)
-      .join('\n');
-    navigator.clipboard.writeText(formattedText);
-    toast.success('Copied to clipboard');
+  const formatEmailContent = (asHtml: boolean = false) => {
+    // Define the desired field order
+    const fieldOrder = [
+      "List of Uses",
+      "Funding Request Amount ($)",
+      "LTV Requested",
+      "Terms Requested (in Months)",
+      "List of Sources",
+      "Deadline Dates",
+      "Deal Name",
+      "Loan Purpose",
+      "Property Type",
+      "Property Address",
+      "Current Value ($)",
+      "Property Size (Acres)",
+      "Number of Units",
+      "Property Description",
+      "Purchase Price ($)",
+      "Close Date",
+      "Borrowing Entity Name",
+      "Owner Names",
+      "Owners' Combined Liquidity",
+      "Owners' Combined Net Worth",
+      "Are any Owners foreign nationals?",
+      "Owner Experience",
+      "Borrower Situation & File Notes",
+      "Description of Improvements"
+    ];
+
+    // Sort fields according to the order, putting unknown fields at the end
+    const sortedFields = [...extractedFields].sort((a, b) => {
+      const indexA = fieldOrder.indexOf(a.name);
+      const indexB = fieldOrder.indexOf(b.name);
+      if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+
+    const fields = viewMode === 'review' 
+      ? sortedFields.filter(field => !field.value)
+      : sortedFields;
+
+    if (viewMode === 'review' && fields.length === 0) {
+      return asHtml 
+        ? '<div style="font-family: Arial, sans-serif;">All fields are filled out.</div>'
+        : 'All fields are filled out.';
+    }
+
+    const title = viewMode === 'review'
+      ? 'Please provide the following information:'
+      : 'Please let me know your interest and terms in the following loan request:';
+
+    if (asHtml) {
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 800px; line-height: 1.6;">
+          <p style="font-size: 16px; margin-bottom: 24px; color: #1a1a1a;">${title}</p>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px;">
+            ${fields.map(({ name, value }) => `
+              <div style="display: flex; margin-bottom: 12px; align-items: baseline;">
+                <div style="min-width: 200px; padding-right: 16px;">
+                  <span style="font-weight: 500; color: #4a5568;">${name}:</span>
+                </div>
+                <div style="flex: 1;">
+                  <span style="color: ${value ? '#1a1a1a' : '#a0aec0'}; font-family: 'Courier New', monospace;">
+                    ${value || '[Missing]'}
+                  </span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `.trim();
+
+      return html;
+    }
+
+    return [
+      title,
+      '',
+      ...fields.map(({ name, value }) => 
+        `${name}: ${value || '[Missing]'}`
+      ),
+      ''
+    ].join('\n');
+  };
+
+  const copyToClipboard = (asHtml: boolean = false) => {
+    const content = formatEmailContent(asHtml);
+    if (asHtml) {
+      const blob = new Blob([content], { type: 'text/html' });
+      const clipboardItem = new ClipboardItem({ 'text/html': blob });
+      navigator.clipboard.write([clipboardItem]);
+      toast.success('Copied HTML to clipboard');
+    } else {
+      navigator.clipboard.writeText(content);
+      toast.success('Copied plain text to clipboard');
+    }
+  };
+
+  const openEmail = () => {
+    const content = formatEmailContent(false);
+    const mailtoLink = `mailto:?subject=Loan Request Details&body=${encodeURIComponent(content)}`;
+    window.location.href = mailtoLink;
   };
 
   const clearFields = () => {
@@ -50,25 +159,52 @@ export default function PDFParsePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">PDF Parse</h1>
-        {extractedFields.length > 0 && (
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={clearFields}
-              className="flex items-center"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Clear
-            </Button>
-            <Button 
-              onClick={copyToClipboard}
-              className="flex items-center"
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copy All
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center space-x-4">
+          <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lender">Lender Email</SelectItem>
+              <SelectItem value="review">Initial Review</SelectItem>
+            </SelectContent>
+          </Select>
+          {extractedFields.length > 0 && (
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={clearFields}
+                className="flex items-center"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Clear
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => copyToClipboard(false)}
+                className="flex items-center"
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy Text
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => copyToClipboard(true)}
+                className="flex items-center"
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copy HTML
+              </Button>
+              <Button 
+                onClick={openEmail}
+                className="flex items-center"
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Email
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -78,29 +214,29 @@ export default function PDFParsePage() {
         <CardContent>
           <div
             {...getRootProps()}
-            className={`
-              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-              transition-colors duration-200
-              ${isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
-              ${isProcessing ? 'pointer-events-none opacity-50' : 'hover:border-primary hover:bg-primary/5'}
-            `}
+            className={cn(
+              "relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors duration-200",
+              isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25",
+              isProcessing ? "pointer-events-none" : "hover:border-primary hover:bg-primary/5"
+            )}
           >
             <input {...getInputProps()} />
-            {isProcessing ? (
-              <div className="flex flex-col items-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-                <p>Processing PDF...</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">
-                  {isDragActive
-                    ? "Drop the PDF file here"
-                    : "Drag and drop a PDF file here, or click to select"}
-                </p>
+            {isProcessing && (
+              <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium">Processing PDF...</p>
+                </div>
               </div>
             )}
+            <div className="flex flex-col items-center">
+              <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">
+                {isDragActive
+                  ? "Drop the PDF file here"
+                  : "Drag and drop a PDF file here, or click to select"}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -108,32 +244,25 @@ export default function PDFParsePage() {
       {extractedFields.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Extracted Fields</CardTitle>
+            <CardTitle>
+              {viewMode === 'review' ? 'Missing Fields' : 'Extracted Fields'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {extractedFields.map((field, index) => (
-                <div
-                  key={index}
-                  className="p-2 rounded bg-muted/50 flex justify-between items-center group"
-                >
-                  <div className="flex-1">
-                    <span className="font-medium">{field.name}:</span>
-                    <span className="ml-2 font-mono">{field.value}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${field.name}: ${field.value}`);
-                      toast.success('Field copied to clipboard');
-                    }}
+            <div className="space-y-4">
+              {formatEmailContent()
+                .split('\n')
+                .map((line, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "text-sm",
+                      index === 0 ? "font-medium text-lg mb-4" : "font-mono"
+                    )}
                   >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                    {line}
+                  </div>
+                ))}
             </div>
           </CardContent>
         </Card>

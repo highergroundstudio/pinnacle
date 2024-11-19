@@ -3,43 +3,19 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { BrokerSearch } from "@/components/broker-search";
 import { DealForm } from "@/components/deal-form";
-import { AddressForm } from "@/components/address-form";
+import { AddressList } from "@/components/address-list";
+import { LoanCalculator } from "@/components/loan-calculator";
 import { PDFUpload } from "@/components/pdf-upload";
 import { searchBrokerByEmail, checkDuplicateAddress, createBroker, createDeal } from "@/lib/hubspot";
 import { extractPDFContent } from "@/lib/pdf-parser";
-import { Upload } from "lucide-react";
-
-const formSchema = z.object({
-  broker: z.object({
-    email: z.string().email("Invalid email address"),
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    hubspotId: z.string().optional(),
-  }),
-  deal: z.object({
-    name: z.string().min(1, "Deal name is required"),
-    stage: z.string().min(1, "Deal stage is required"),
-    transactionType: z.array(z.string()).min(1, "At least one transaction type is required"),
-    propertyType: z.array(z.string()).min(1, "At least one property type is required"),
-    propertyTypeFuture: z.array(z.string()).min(1, "At least one future property type is required"),
-    amount: z.number().min(0, "Amount must be positive"),
-    asIsValue: z.number().min(0, "As Is Value must be positive"),
-  }),
-  address: z.object({
-    street: z.string().min(1, "Street address is required"),
-    city: z.string().min(1, "City is required"),
-    state: z.string().min(2, "State is required"),
-    zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
-  }),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { dealFormSchema } from "@/lib/schema";
+import { mapFormToHubspotProperties } from "@/lib/utils";
+import { RefreshCw, Upload } from "lucide-react";
 
 export default function NewDealPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,8 +23,8 @@ export default function NewDealPage() {
   const [isAddressChecking, setAddressChecking] = useState(false);
   const [isPDFProcessing, setPDFProcessing] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
+    resolver: zodResolver(dealFormSchema),
     defaultValues: {
       broker: {
         email: "",
@@ -64,12 +40,14 @@ export default function NewDealPage() {
         amount: 0,
         asIsValue: 0,
       },
-      address: {
-        street: "",
-        city: "",
-        state: "",
-        zipCode: "",
-      },
+      addresses: [
+        {
+          street: "",
+          city: "",
+          state: "",
+          zipCode: "",
+        }
+      ],
     },
   });
 
@@ -113,7 +91,6 @@ export default function NewDealPage() {
       setPDFProcessing(true);
       const fields = await extractPDFContent(file);
       
-      // Map PDF fields to form fields
       fields.forEach(({ name, value }) => {
         switch (name.toLowerCase()) {
           case "deal name":
@@ -128,17 +105,17 @@ export default function NewDealPage() {
             form.setValue("deal.asIsValue", parseFloat(value.replace(/[^0-9.-]+/g, "")));
             break;
           case "address":
-            form.setValue("address.street", value);
+            form.setValue("addresses.0.street", value);
             break;
           case "city":
-            form.setValue("address.city", value);
+            form.setValue("addresses.0.city", value);
             break;
           case "state":
-            form.setValue("address.state", value);
+            form.setValue("addresses.0.state", value);
             break;
           case "zip":
           case "zip code":
-            form.setValue("address.zipCode", value);
+            form.setValue("addresses.0.zipCode", value);
             break;
         }
       });
@@ -151,13 +128,18 @@ export default function NewDealPage() {
     }
   };
 
-  const onSubmit = async (data: FormValues) => {
+  const handleReset = () => {
+    form.reset();
+    toast.success("Form has been reset");
+  };
+
+  const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
 
-      // Create or update broker
+      // Create or update broker if email is provided
       let brokerId = data.broker.hubspotId;
-      if (!brokerId) {
+      if (data.broker.email && !brokerId) {
         const broker = await createBroker({
           email: data.broker.email,
           firstName: data.broker.firstName,
@@ -166,11 +148,11 @@ export default function NewDealPage() {
         brokerId = broker.brokerid;
       }
 
-      // Create deal
+      // Create deal with mapped properties
+      const dealProperties = mapFormToHubspotProperties(data);
       const deal = await createDeal({
-        ...data.deal,
-        ...data.address,
-        brokerId,
+        ...dealProperties,
+        brokerId: brokerId || "",
       });
 
       toast.success("Deal created successfully");
@@ -213,26 +195,15 @@ export default function NewDealPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Property Address</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AddressForm 
-                  form={form} 
-                  onAddressCheck={handleAddressCheck}
-                  isChecking={isAddressChecking}
-                />
-              </CardContent>
-            </Card>
+            <AddressList 
+              form={form} 
+              onAddressCheck={handleAddressCheck}
+            />
           </div>
 
           <div className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
                   <Button 
                     type="submit" 
@@ -240,6 +211,16 @@ export default function NewDealPage() {
                     className="flex-1"
                   >
                     {isSubmitting ? "Creating Deal..." : "Create Deal"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    className="flex items-center"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reset
                   </Button>
 
                   <div className="relative flex-1">
@@ -250,23 +231,10 @@ export default function NewDealPage() {
                     />
                   </div>
                 </div>
-
-                <div className="text-sm text-muted-foreground">
-                  <p>You can either fill out the form manually or upload a PDF to auto-fill the fields.</p>
-                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">
-                  Deal summary will appear here as you fill out the form.
-                </div>
-              </CardContent>
-            </Card>
+            <LoanCalculator form={form} />
           </div>
         </div>
       </form>

@@ -1,38 +1,66 @@
 "use client";
 
-import { forwardRef } from "react";
-import { Input } from "./input";
-import Autocomplete from "react-google-autocomplete";
+import { forwardRef, useEffect, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { cn } from "@/lib/utils";
 
 interface AddressInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   onPlaceSelect?: (place: google.maps.places.PlaceResult) => void;
 }
 
-const AddressInput = forwardRef<HTMLInputElement, AddressInputProps>(
-  ({ onPlaceSelect, className, ...props }, ref) => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+export const AddressInput = forwardRef<HTMLInputElement, AddressInputProps>(
+  ({ className, onPlaceSelect, ...props }, ref) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const autoCompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+    const inputRef = useRef<HTMLInputElement | null>(null);
 
-    if (!apiKey) {
-      return <Input ref={ref} {...props} />;
-    }
+    useEffect(() => {
+      if (!window.google || !inputRef.current) return;
+
+      autoCompleteRef.current = new window.google.maps.places.Autocomplete(
+        inputRef.current,
+        { types: ["address"], componentRestrictions: { country: "us" } }
+      );
+
+      autoCompleteRef.current.addListener("place_changed", () => {
+        if (!autoCompleteRef.current) return;
+        
+        const place = autoCompleteRef.current.getPlace();
+        onPlaceSelect?.(place);
+        setIsLoading(false);
+      });
+
+      return () => {
+        if (autoCompleteRef.current) {
+          google.maps.event.clearInstanceListeners(autoCompleteRef.current);
+        }
+      };
+    }, [onPlaceSelect]);
 
     return (
-      <Autocomplete
-        apiKey={apiKey}
-        onPlaceSelected={onPlaceSelect}
-        language="en"
-        options={{
-          types: ["address"],
-          componentRestrictions: { country: "us" },
-        }}
-        style={{ width: "100%" }}
-        {...props}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-      />
+      <div className="relative">
+        <Input
+          ref={(node) => {
+            // Handle both refs
+            if (typeof ref === "function") {
+              ref(node);
+            } else if (ref) {
+              ref.current = node;
+            }
+            inputRef.current = node;
+          }}
+          className={cn("pr-8", className)}
+          onFocus={() => setIsLoading(true)}
+          onBlur={() => setIsLoading(false)}
+          {...props}
+        />
+        {isLoading && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            <LoadingSpinner size="sm" />
+          </div>
+        )}
+      </div>
     );
   }
 );
-
-AddressInput.displayName = "AddressInput";
-
-export { AddressInput };

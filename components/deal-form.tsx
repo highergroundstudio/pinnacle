@@ -1,6 +1,7 @@
 "use client";
 
 import { UseFormReturn } from "react-hook-form";
+import { useEffect, useState } from "react";
 import {
   Form,
   FormControl,
@@ -19,6 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MultiSelect } from "@/components/multi-select";
+import { checkDuplicateDealName } from "@/lib/hubspot";
+import { toast } from "sonner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DealFormProps {
   form: UseFormReturn<any>;
@@ -65,6 +71,42 @@ const propertyTypes = [
 ];
 
 export function DealForm({ form }: DealFormProps) {
+  const [isCheckingName, setIsCheckingName] = useState(false);
+  const [isNameUnique, setIsNameUnique] = useState(false);
+
+  // Watch for street address changes to auto-update deal name
+  const street = form.watch("address.street");
+  const dealName = form.watch("deal.name");
+
+  useEffect(() => {
+    if (street && !dealName) {
+      form.setValue("deal.name", street);
+    }
+  }, [street, dealName, form]);
+
+  // Check for duplicate deal names
+  useEffect(() => {
+    const checkDealName = async () => {
+      if (!dealName) return;
+      
+      try {
+        setIsCheckingName(true);
+        const isDuplicate = await checkDuplicateDealName(dealName);
+        setIsNameUnique(!isDuplicate);
+        if (isDuplicate) {
+          toast.error("A similar deal name already exists");
+        }
+      } catch (error) {
+        console.error("Failed to check deal name:", error);
+      } finally {
+        setIsCheckingName(false);
+      }
+    };
+
+    const timeoutId = setTimeout(checkDealName, 500);
+    return () => clearTimeout(timeoutId);
+  }, [dealName]);
+
   return (
     <Form {...form}>
       <div className="space-y-4">
@@ -74,9 +116,22 @@ export function DealForm({ form }: DealFormProps) {
             name="deal.name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Deal Name</FormLabel>
+                <FormLabel className="flex items-center space-x-2">
+                  <span>Deal Name</span>
+                  {isCheckingName ? (
+                    <LoadingSpinner size="sm" className="opacity-50" />
+                  ) : dealName && isNameUnique ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : null}
+                </FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input 
+                    {...field} 
+                    placeholder="Will use address if empty"
+                    className={cn(
+                      dealName && isNameUnique && "border-green-500"
+                    )}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

@@ -1,11 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { pb, type AuthModel } from "@/lib/pocketbase";
-import { useRouter, usePathname } from "next/navigation";
+import { createContext, useContext, useState } from "react";
+
+type User = {
+  email: string;
+  name: string;
+};
 
 type AuthContextType = {
-  user: AuthModel | null;
+  user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => void;
 };
@@ -13,35 +16,19 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthModel | null>(null);
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    // Check if we have a valid session
-    const model = pb.authStore.model as AuthModel | null;
-    setUser(model);
-
-    // Subscribe to auth state changes
-    pb.authStore.onChange(() => {
-      setUser(pb.authStore.model as AuthModel | null);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!user && !pathname.startsWith("/auth")) {
-      router.push("/auth/login");
-    }
-  }, [user, pathname, router]);
+  const [user] = useState<User | null>({
+    email: "demo@example.com",
+    name: "Demo User"
+  });
 
   const signIn = async (email: string, password: string) => {
-    await pb.collection("users").authWithPassword(email, password);
-    router.push("/");
+    // Mock authentication
+    console.log("Mock sign in:", email, password);
   };
 
   const signOut = () => {
-    pb.authStore.clear();
-    router.push("/auth/login");
+    // Mock sign out
+    console.log("Mock sign out");
   };
 
   return (

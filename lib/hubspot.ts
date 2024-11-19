@@ -12,46 +12,36 @@ export interface BrokerInfo {
   brokerid: string;
 }
 
+// Simulated delay for testing
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Mock data for testing
+const mockBrokers: Record<string, BrokerInfo> = {
+  "john@example.com": {
+    firstname: "John",
+    lastname: "Smith",
+    fullname: "John Smith",
+    email: "john@example.com",
+    brokerid: "123456"
+  }
+};
+
+const mockDeals = [
+  "123 Main Street",
+  "456 Oak Avenue",
+  "789 Pine Road"
+];
+
 export async function searchBrokerByEmail(email: string): Promise<BrokerInfo | null> {
   if (!email) {
     throw new Error("Email is required");
   }
 
-  try {
-    const apiResponse = await hubspotClient.crm.contacts.basicApi.getById(
-      email,
-      ["firstname", "lastname", "email"],
-      undefined,
-      undefined,
-      false,
-      "email"
-    );
+  // Simulate API delay
+  await delay(1500);
 
-    const {
-      firstname,
-      lastname,
-      email: brokerEmail,
-      hs_object_id,
-    } = apiResponse.properties;
-
-    const fullname = `${firstname} ${lastname}`;
-
-    console.log("Found broker info for", fullname);
-
-    return {
-      firstname: firstname?.toString() || "",
-      lastname: lastname?.toString() || "",
-      fullname,
-      email: brokerEmail as string,
-      brokerid: hs_object_id as string,
-    };
-  } catch (error: any) {
-    console.error('Error searching HubSpot contact:', error?.message || error);
-    if (error?.message?.includes('unauthorized')) {
-      throw new Error('Invalid HubSpot API token. Please check your settings.');
-    }
-    return null;
-  }
+  // For testing: return mock data
+  return mockBrokers[email] || null;
 }
 
 export async function createBroker(data: { 
@@ -59,58 +49,36 @@ export async function createBroker(data: {
   firstName: string; 
   lastName: string; 
 }): Promise<BrokerInfo> {
-  try {
-    const simplePublicObjectInput = {
-      properties: {
-        email: data.email,
-        firstname: data.firstName,
-        lastname: data.lastName
-      }
-    };
+  // Simulate API delay
+  await delay(1500);
 
-    const apiResponse = await hubspotClient.crm.contacts.basicApi.create(simplePublicObjectInput);
-
-    return {
-      firstname: apiResponse.properties.firstname,
-      lastname: apiResponse.properties.lastname,
-      fullname: `${apiResponse.properties.firstname} ${apiResponse.properties.lastname}`,
-      email: apiResponse.properties.email,
-      brokerid: apiResponse.id,
-    };
-  } catch (error: any) {
-    console.error('Error creating HubSpot contact:', error?.message || error);
-    if (error?.message?.includes('unauthorized')) {
-      throw new Error('Invalid HubSpot API token. Please check your settings.');
-    }
-    throw new Error('Failed to create broker. Please try again.');
-  }
+  // For testing: return simulated response
+  return {
+    firstname: data.firstName,
+    lastname: data.lastName,
+    fullname: `${data.firstName} ${data.lastName}`,
+    email: data.email,
+    brokerid: Math.random().toString(36).substring(7),
+  };
 }
 
 export async function checkDuplicateAddress(address: string): Promise<boolean> {
-  try {
-    const publicObjectSearchRequest = {
-      filterGroups: [{
-        filters: [{
-          propertyName: 'address',
-          operator: 'EQ',
-          value: address
-        }]
-      }]
-    };
+  // Simulate API delay
+  await delay(1500);
 
-    const apiResponse = await hubspotClient.crm.deals.searchApi.doSearch({
-      ...publicObjectSearchRequest,
-      limit: 1
-    });
+  // For testing: randomly return true/false
+  return Math.random() > 0.7;
+}
 
-    return apiResponse.total > 0;
-  } catch (error: any) {
-    console.error('Error checking duplicate address:', error?.message || error);
-    if (error?.message?.includes('unauthorized')) {
-      throw new Error('Invalid HubSpot API token. Please check your settings.');
-    }
-    throw new Error('Failed to check address. Please try again.');
-  }
+export async function checkDuplicateDealName(name: string): Promise<boolean> {
+  // Simulate API delay
+  await delay(1000);
+
+  // For testing: check against mock deals
+  return mockDeals.some(deal => 
+    deal.toLowerCase().includes(name.toLowerCase()) || 
+    name.toLowerCase().includes(deal.toLowerCase())
+  );
 }
 
 export async function createDeal(data: {
@@ -127,34 +95,9 @@ export async function createDeal(data: {
   propertyTypeFuture: string[];
   brokerId: string;
 }): Promise<{ id: string; }> {
-  try {
-    const simplePublicObjectInput = {
-      properties: {
-        dealname: data.name,
-        dealstage: data.stage,
-        amount: data.amount.toString(),
-        as_is_value: data.asIsValue.toString(),
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        zip: data.zipCode,
-        transaction_type: data.transactionType.join(';'),
-        property_type: data.propertyType.join(';'),
-        property_type_future: data.propertyTypeFuture.join(';')
-      },
-      associations: [{
-        to: { id: data.brokerId },
-        types: [{ category: "HUBSPOT_DEFINED", typeId: 3 }]
-      }]
-    };
+  // Simulate API delay
+  await delay(1500);
 
-    const apiResponse = await hubspotClient.crm.deals.basicApi.create(simplePublicObjectInput);
-    return { id: apiResponse.id };
-  } catch (error: any) {
-    console.error('Error creating HubSpot deal:', error?.message || error);
-    if (error?.message?.includes('unauthorized')) {
-      throw new Error('Invalid HubSpot API token. Please check your settings.');
-    }
-    throw new Error('Failed to create deal. Please try again.');
-  }
+  // For testing: return simulated response
+  return { id: Math.random().toString(36).substring(7) };
 }

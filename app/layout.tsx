@@ -10,8 +10,8 @@ import Script from "next/script";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Deal Management Tool",
-  description: "Internal deal management and folder creation tool",
+  title: "Pinnacle | Deal Management Platform",
+  description: "Professional deal management and folder creation platform",
 };
 
 export default function RootLayout({
@@ -39,7 +39,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <div className="min-h-screen bg-background">
-            <header className="border-b">
+            <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
               <div className="container flex h-16 items-center justify-between">
                 <MainNav />
                 <div className="flex items-center space-x-4">
@@ -48,6 +48,9 @@ export default function RootLayout({
               </div>
             </header>
             <main className="container py-6">{children}</main>
+            <footer className="mt-auto">
+              <div className="h-32 bg-[url('/mountains.svg')] bg-cover bg-bottom opacity-10 dark:opacity-5" />
+            </footer>
           </div>
           <Toaster />
         </ThemeProvider>
