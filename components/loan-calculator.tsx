@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { UseFormReturn } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,16 +14,16 @@ import {
 } from "@/components/ui/collapsible";
 
 interface LoanCalculatorProps {
-  form: UseFormReturn<any>;
+  asIsValue: number;
+  onAmountChange: (amount: number) => void;
 }
 
 const PRESET_PERCENTAGES = [70, 75, 80];
 
-export function LoanCalculator({ form }: LoanCalculatorProps) {
+export function LoanCalculator({ asIsValue, onAmountChange }: LoanCalculatorProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [ltv, setLtv] = React.useState<string>("75");
   const [calculatedAmount, setCalculatedAmount] = React.useState<number>(0);
-  const asIsValue = form.watch("deal.asIsValue") || 0;
 
   React.useEffect(() => {
     const percentage = parseFloat(ltv);
@@ -33,14 +32,10 @@ export function LoanCalculator({ form }: LoanCalculatorProps) {
     }
   }, [asIsValue, ltv]);
 
-  // Auto-update amount when LTV changes
-  React.useEffect(() => {
-    const percentage = parseFloat(ltv);
-    if (!isNaN(percentage) && percentage > 0 && percentage <= 100) {
-      const amount = (asIsValue * percentage) / 100;
-      form.setValue("deal.amount", amount);
-    }
-  }, [ltv, asIsValue, form]);
+  const handleApplyAmount = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent form submission
+    onAmountChange(calculatedAmount);
+  };
 
   return (
     <Card>
@@ -100,11 +95,21 @@ export function LoanCalculator({ form }: LoanCalculatorProps) {
             </div>
 
             {asIsValue > 0 && ltv && (
-              <div className="pt-2 space-y-1">
-                <div className="text-sm text-muted-foreground">Calculated Amount:</div>
-                <div className="text-xl font-bold text-primary">
-                  {formatCurrency(calculatedAmount)}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <div className="text-sm text-muted-foreground">Calculated Amount:</div>
+                  <div className="text-xl font-bold text-primary">
+                    {formatCurrency(calculatedAmount)}
+                  </div>
                 </div>
+                <Button 
+                  type="button"
+                  onClick={handleApplyAmount}
+                  className="w-full"
+                >
+                  <Calculator className="mr-2 h-4 w-4" />
+                  Apply Amount
+                </Button>
               </div>
             )}
           </CardContent>

@@ -133,6 +133,16 @@ export default function NewDealPage() {
     toast.success("Form has been reset");
   };
 
+  const handleAmountChange = (amount: number) => {
+    form.setValue("deal.amount", amount);
+    toast.success(`Amount updated to ${new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount)}`);
+  };
+
   const onSubmit = async (data: any) => {
     try {
       setIsSubmitting(true);
@@ -234,7 +244,10 @@ export default function NewDealPage() {
               </CardContent>
             </Card>
 
-            <LoanCalculator form={form} />
+            <LoanCalculator 
+              asIsValue={form.watch("deal.asIsValue") || 0}
+              onAmountChange={handleAmountChange}
+            />
           </div>
         </div>
       </form>

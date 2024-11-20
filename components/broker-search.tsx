@@ -112,6 +112,21 @@ export function BrokerSearch({ form, onSearch, isSearching }: BrokerSearchProps)
                     }}
                   />
                 </FormControl>
+                <Button
+                  type="button"
+                  onClick={handleSearch}
+                  disabled={isSearching || !email}
+                  className="w-24"
+                >
+                  {isSearching ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      Search
+                    </>
+                  )}
+                </Button>
               </div>
               <FormMessage />
             </FormItem>
