@@ -16,19 +16,26 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user] = useState<User | null>({
-    email: "demo@example.com",
-    name: "Demo User"
+  const [user, setUser] = useState<User | null>(() => {
+    // Check localStorage for saved user data
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
   });
 
   const signIn = async (email: string, password: string) => {
-    // Mock authentication
-    console.log("Mock sign in:", email, password);
+    // Simple authentication logic
+    if (password === 'admin123') {
+      const user = { email, name: email.split('@')[0] };
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      throw new Error('Invalid credentials');
+    }
   };
 
   const signOut = () => {
-    // Mock sign out
-    console.log("Mock sign out");
+    setUser(null);
+    localStorage.removeItem('user');
   };
 
   return (

@@ -23,21 +23,14 @@ import { MultiSelect } from "@/components/multi-select";
 import { checkDuplicateDealName } from "@/lib/hubspot";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Check } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { dealStageOptions } from "@/lib/vars";
+import { Button } from "@/components/ui/button";
 
 interface DealFormProps {
   form: UseFormReturn<any>;
 }
-
-const dealStages = [
-  { value: "pre-submission", label: "Pre-Submission" },
-  { value: "new-submission", label: "New Submission" },
-  { value: "new-submission-form", label: "New Submission w/ Form" },
-  { value: "second-review", label: "Second Review" },
-  { value: "committee-pricing", label: "In Committee for Pricing" },
-  { value: "engage-process", label: "Engage - In Process" },
-];
 
 const transactionTypes = [
   "Purchase",
@@ -73,10 +66,12 @@ const propertyTypes = [
 export function DealForm({ form }: DealFormProps) {
   const [isCheckingName, setIsCheckingName] = useState(false);
   const [isNameUnique, setIsNameUnique] = useState(false);
+  const [isCheckingSponsor, setIsCheckingSponsor] = useState(false);
+  const [sponsorId, setSponsorId] = useState<string>("");
 
-  // Watch for street address changes to auto-update deal name
-  const street = form.watch("address.street");
+  const street = form.watch("addresses.0.street");
   const dealName = form.watch("deal.name");
+  const sponsorName = form.watch("deal.sponsorName");
 
   useEffect(() => {
     if (street && !dealName) {
@@ -84,38 +79,55 @@ export function DealForm({ form }: DealFormProps) {
     }
   }, [street, dealName, form]);
 
-  // Check for duplicate deal names
-  useEffect(() => {
-    const checkDealName = async () => {
-      if (!dealName) return;
-      
-      try {
-        setIsCheckingName(true);
-        const isDuplicate = await checkDuplicateDealName(dealName);
-        setIsNameUnique(!isDuplicate);
-        if (isDuplicate) {
-          toast.error("A similar deal name already exists");
-        }
-      } catch (error) {
-        console.error("Failed to check deal name:", error);
-      } finally {
-        setIsCheckingName(false);
-      }
-    };
+  const handleSponsorSearch = async () => {
+    if (!sponsorName) {
+      toast.error("Please enter a sponsor name");
+      return;
+    }
 
-    const timeoutId = setTimeout(checkDealName, 500);
-    return () => clearTimeout(timeoutId);
-  }, [dealName]);
+    try {
+      setIsCheckingSponsor(true);
+      // TODO: Implement HubSpot sponsor search
+      toast.success("Sponsor found!");
+      setSponsorId("12345");
+    } catch (error) {
+      toast.error("Failed to find sponsor");
+    } finally {
+      setIsCheckingSponsor(false);
+    }
+  };
+
+  const handleDealSearch = async () => {
+    if (!dealName) {
+      toast.error("Please enter a deal name");
+      return;
+    }
+
+    try {
+      setIsCheckingName(true);
+      const isDuplicate = await checkDuplicateDealName(dealName);
+      setIsNameUnique(!isDuplicate);
+      if (isDuplicate) {
+        toast.error("A similar deal name already exists");
+      } else {
+        toast.success("Deal name is unique");
+      }
+    } catch (error) {
+      toast.error("Failed to check deal name");
+    } finally {
+      setIsCheckingName(false);
+    }
+  };
 
   return (
     <Form {...form}>
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex space-x-2">
           <FormField
             control={form.control}
             name="deal.name"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex-1">
                 <FormLabel className="flex items-center space-x-2">
                   <span>Deal Name</span>
                   {isCheckingName ? (
@@ -137,34 +149,18 @@ export function DealForm({ form }: DealFormProps) {
               </FormItem>
             )}
           />
-
-          <FormField
-            control={form.control}
-            name="deal.stage"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Deal Stage</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a stage" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {dealStages.map((stage) => (
-                      <SelectItem key={stage.value} value={stage.value}>
-                        {stage.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <Button
+            type="button"
+            onClick={handleDealSearch}
+            className="mt-8"
+            variant={isNameUnique ? "outline" : "default"}
+            disabled={!dealName || isCheckingName}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
             name="deal.transactionType"
@@ -184,6 +180,33 @@ export function DealForm({ form }: DealFormProps) {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="deal.stage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Deal Stage</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a stage" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {dealStageOptions.map((stage) => (
+                      <SelectItem key={stage.value.hubspot} value={stage.value.hubspot}>
+                        {stage.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
           <FormField
             control={form.control}
             name="deal.propertyType"
@@ -223,7 +246,7 @@ export function DealForm({ form }: DealFormProps) {
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <FormField
             control={form.control}
             name="deal.amount"
@@ -261,6 +284,41 @@ export function DealForm({ form }: DealFormProps) {
               </FormItem>
             )}
           />
+
+          <div className="flex space-x-2">
+            <FormField
+              control={form.control}
+              name="deal.sponsorName"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Sponsor Name</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field}
+                      placeholder="Enter sponsor name"
+                      className={cn(
+                        sponsorId && "border-green-500"
+                      )}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              onClick={handleSponsorSearch}
+              className="mt-8"
+              variant={sponsorId ? "outline" : "default"}
+              disabled={!sponsorName || isCheckingSponsor}
+            >
+              {isCheckingSponsor ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </Form>

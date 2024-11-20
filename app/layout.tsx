@@ -12,6 +12,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Pinnacle | Deal Management Platform",
   description: "Professional deal management and folder creation platform",
+  icons: {
+    icon: "/favicon.ico"
+  }
 };
 
 export default function RootLayout({

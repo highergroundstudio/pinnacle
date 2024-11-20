@@ -75,30 +75,58 @@ export function AddressForm({ form, onAddressCheck, isChecking }: AddressFormPro
     form.setValue("address.state", state);
     form.setValue("address.zipCode", zipCode);
 
-    // Check if all fields are filled before enabling the check button
     setCanCheck(!!(street && city && state && zipCode));
   };
 
   return (
     <Form {...form}>
       <div className="space-y-4">
-        <FormField
-          control={form.control}
-          name="address.street"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Street Address</FormLabel>
-              <FormControl>
-                <AddressInput
-                  onPlaceSelect={handlePlaceSelect}
-                  {...field}
-                  disabled={isChecking}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex space-x-2">
+          <FormField
+            control={form.control}
+            name="address.street"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Street Address</FormLabel>
+                <FormControl>
+                  <AddressInput
+                    onPlaceSelect={handlePlaceSelect}
+                    {...field}
+                    disabled={isChecking}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button 
+            type="button" 
+            onClick={handleAddressCheck}
+            disabled={isChecking || !canCheck}
+            className={cn(
+              "mt-8",
+              isUnique && "border-green-500 text-green-500 hover:bg-green-50 dark:hover:bg-green-950"
+            )}
+            variant={isUnique ? "outline" : "default"}
+          >
+            {isChecking ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Checking...
+              </>
+            ) : isUnique ? (
+              <>
+                <Check className="mr-2 h-4 w-4" />
+                Verified
+              </>
+            ) : (
+              <>
+                <Search className="mr-2 h-4 w-4" />
+                Check
+              </>
+            )}
+          </Button>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <FormField
@@ -143,34 +171,6 @@ export function AddressForm({ form, onAddressCheck, isChecking }: AddressFormPro
             )}
           />
         </div>
-
-        <Button 
-          type="button" 
-          variant={isUnique ? "outline" : "default"}
-          onClick={handleAddressCheck}
-          disabled={isChecking || !canCheck}
-          className={cn(
-            "w-full sm:w-auto transition-colors",
-            isUnique && "border-green-500 text-green-500 hover:bg-green-50 dark:hover:bg-green-950"
-          )}
-        >
-          {isChecking ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Checking Address...
-            </>
-          ) : isUnique ? (
-            <>
-              <Check className="mr-2 h-4 w-4" />
-              Address Verified
-            </>
-          ) : (
-            <>
-              <Search className="mr-2 h-4 w-4" />
-              Check Address
-            </>
-          )}
-        </Button>
       </div>
     </Form>
   );

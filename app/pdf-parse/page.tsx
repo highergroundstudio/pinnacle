@@ -46,14 +46,7 @@ export default function PDFParsePage() {
   });
 
   const formatEmailContent = (asHtml: boolean = false) => {
-    // Define the desired field order
     const fieldOrder = [
-      "List of Uses",
-      "Funding Request Amount ($)",
-      "LTV Requested",
-      "Terms Requested (in Months)",
-      "List of Sources",
-      "Deadline Dates",
       "Deal Name",
       "Loan Purpose",
       "Property Type",
@@ -62,19 +55,18 @@ export default function PDFParsePage() {
       "Property Size (Acres)",
       "Number of Units",
       "Property Description",
-      "Purchase Price ($)",
-      "Close Date",
+      "Terms Requested (in Months)",
+      "List of Uses",
+      "Exit Strategy",
+      "Deadline Dates",
       "Borrowing Entity Name",
       "Owner Names",
       "Owners' Combined Liquidity",
       "Owners' Combined Net Worth",
-      "Are any Owners foreign nationals?",
       "Owner Experience",
       "Borrower Situation & File Notes",
-      "Description of Improvements"
     ];
 
-    // Sort fields according to the order, putting unknown fields at the end
     const sortedFields = [...extractedFields].sort((a, b) => {
       const indexA = fieldOrder.indexOf(a.name);
       const indexB = fieldOrder.indexOf(b.name);
@@ -90,7 +82,7 @@ export default function PDFParsePage() {
 
     if (viewMode === 'review' && fields.length === 0) {
       return asHtml 
-        ? '<div style="font-family: Arial, sans-serif;">All fields are filled out.</div>'
+        ? '<div>All fields are filled out.</div>'
         : 'All fields are filled out.';
     }
 
@@ -99,27 +91,15 @@ export default function PDFParsePage() {
       : 'Please let me know your interest and terms in the following loan request:';
 
     if (asHtml) {
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 800px; line-height: 1.6;">
-          <p style="font-size: 16px; margin-bottom: 24px; color: #1a1a1a;">${title}</p>
-          <div style="background: #f8f9fa; border-radius: 8px; padding: 20px;">
-            ${fields.map(({ name, value }) => `
-              <div style="display: flex; margin-bottom: 12px; align-items: baseline;">
-                <div style="min-width: 200px; padding-right: 16px;">
-                  <span style="font-weight: 500; color: #4a5568;">${name}:</span>
-                </div>
-                <div style="flex: 1;">
-                  <span style="color: ${value ? '#1a1a1a' : '#a0aec0'}; font-family: 'Courier New', monospace;">
-                    ${value || '[Missing]'}
-                  </span>
-                </div>
-              </div>
-            `).join('')}
-          </div>
+      return `
+        <div id="parsedHTML" class="input p-4 bg-gray-100 rounded-md">
+          <div>${title}</div>
+          <br>
+          ${fields.map(({ name, value }) => `
+            <div><strong>${name}:</strong> ${value || '[Missing]'}</div>
+          `).join('')}
         </div>
       `.trim();
-
-      return html;
     }
 
     return [

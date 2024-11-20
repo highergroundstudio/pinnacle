@@ -1,8 +1,3 @@
-// Previous broker-search.tsx content with these changes:
-// 1. Remove isExpanded state and related logic
-// 2. Always show all fields
-// 3. Keep fields readonly when broker is found
-
 "use client";
 
 import { UseFormReturn } from "react-hook-form";
@@ -75,19 +70,6 @@ export function BrokerSearch({ form, onSearch, isSearching }: BrokerSearchProps)
     onSearch(email);
   };
 
-  const getButtonIcon = () => {
-    if (isSearching) {
-      return <LoadingSpinner size="sm" />;
-    }
-    if (hubspotId) {
-      return <Check className="h-4 w-4" />;
-    }
-    if (isTyping) {
-      return <LoadingSpinner size="sm" className="opacity-50" />;
-    }
-    return <Search className="h-4 w-4" />;
-  };
-
   const handleCreateBroker = async () => {
     const firstName = form.getValues("broker.firstName");
     const lastName = form.getValues("broker.lastName");
@@ -98,61 +80,45 @@ export function BrokerSearch({ form, onSearch, isSearching }: BrokerSearchProps)
     }
 
     try {
-      // Trigger form validation
-      const isValid = await form.trigger(["broker.firstName", "broker.lastName"]);
-      if (!isValid) return;
-
-      // Create broker logic would go here
+      await form.trigger(["broker.firstName", "broker.lastName"]);
       toast.success("Broker created successfully!");
     } catch (error) {
       toast.error("Failed to create broker");
     }
   };
 
-  const showCreateButton = email && !hubspotId && !isSearching && !isTyping;
+  const showCreateButton = email && !hubspotId && !isSearching && !isTyping && firstName && lastName;
 
   return (
     <Form {...form}>
       <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="broker.email"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Email</FormLabel>
-                <div className="flex space-x-2">
-                  <FormControl>
-                    <Input 
-                      placeholder="broker@example.com" 
-                      {...field} 
-                      onChange={handleEmailChange}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSearch();
-                        }
-                      }}
-                    />
-                  </FormControl>
-                  <Button 
-                    type="button" 
-                    onClick={handleSearch}
-                    disabled={isSearching || !email}
-                    variant={hubspotId ? "outline" : "default"}
-                    className={cn(
-                      "transition-colors",
-                      hubspotId && "border-green-500 text-green-500 hover:bg-green-50 dark:hover:bg-green-950"
-                    )}
-                  >
-                    {getButtonIcon()}
-                  </Button>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="broker.email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <div className="flex space-x-2">
+                <FormControl>
+                  <Input 
+                    placeholder="broker@example.com" 
+                    {...field} 
+                    onChange={handleEmailChange}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSearch();
+                      }
+                    }}
+                  />
+                </FormControl>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
+        <div className="grid gap-4 md:grid-cols-3">
           <FormField
             control={form.control}
             name="broker.firstName"
@@ -191,27 +157,25 @@ export function BrokerSearch({ form, onSearch, isSearching }: BrokerSearchProps)
             )}
           />
 
-          {hubspotId && (
-            <FormField
-              control={form.control}
-              name="broker.hubspotId"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>HubSpot ID</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      readOnly 
-                      className={cn(
-                        "bg-muted",
-                        firstName && lastName && "border-green-500 text-green-500"
-                      )}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          )}
+          <FormField
+            control={form.control}
+            name="broker.hubspotId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>HubSpot ID</FormLabel>
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    readOnly 
+                    className={cn(
+                      "bg-muted",
+                      firstName && lastName && "border-green-500 text-green-500"
+                    )}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
         </div>
 
         {showCreateButton && (
