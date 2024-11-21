@@ -108,7 +108,7 @@ export default function NewDealPage() {
 			setPDFProcessing(true);
 			const fields = await extractPDFContent(file);
 
-			fields.forEach(({ name, value }) => {
+			for (const { name, value } of fields) {
 				switch (name.toLowerCase()) {
 					case "deal name":
 						form.setValue("deal.name", value);
@@ -117,14 +117,14 @@ export default function NewDealPage() {
 					case "funding request amount":
 						form.setValue(
 							"deal.amount",
-							parseFloat(value.replace(/[^0-9.-]+/g, "")),
+							Number.parseFloat(value.replace(/[^0-9.-]+/g, "")),
 						);
 						break;
 					case "as is value":
 					case "current value":
 						form.setValue(
 							"deal.asIsValue",
-							parseFloat(value.replace(/[^0-9.-]+/g, "")),
+							Number.parseFloat(value.replace(/[^0-9.-]+/g, "")),
 						);
 						break;
 					case "address":
@@ -141,7 +141,7 @@ export default function NewDealPage() {
 						form.setValue("addresses.0.zipCode", value);
 						break;
 				}
-			});
+			}
 
 			toast.success("PDF processed successfully");
 		} catch (error: any) {
