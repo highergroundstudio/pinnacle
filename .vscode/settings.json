@@ -1,0 +1,21 @@
+{
+	"emeraldwalk.runonsave": {
+		"commands": [
+			{
+				"match": "\\.svelte$",
+				"cmd": "yarn run format"
+			}
+		]
+	},
+	"codegpt.apiKey": "gicomai.openai_apikey",
+	"github.copilot.advanced": {},
+	"testing.automaticallyOpenPeekView": "never",
+	"sqltools.connections": [
+		{
+			"previewLimit": 50,
+			"driver": "SQLite",
+			"name": "Lenders",
+			"database": "${workspaceFolder:lenderify}/prisma/dev.db"
+		}
+	]
+}
