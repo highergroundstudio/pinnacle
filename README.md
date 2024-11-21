@@ -1,50 +1,82 @@
-# create-svelte
+# 🏔 Pinnacle - Deal Management Platform
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+A professional, modern deal management and folder creation platform built with Next.js 14, TypeScript, and Tailwind CSS.
 
-## Creating a project
+![Pinnacle Dashboard](https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2400&auto=format&fit=crop)
 
-If you're seeing this, you've probably already done this step. Congrats!
+## ✨ Features
 
+- 🚀 **Lightning Fast**: Built with Next.js 14 and Server Components
+- 🎨 **Beautiful UI**: Crafted with Tailwind CSS and shadcn/ui
+- 🔒 **Secure**: Server-side HubSpot integration
+- 📝 **Smart Forms**: Auto-complete addresses with Google Maps API
+- 📊 **Deal Management**: Track and manage deals efficiently
+- 📄 **PDF Parsing**: Extract data from PDFs automatically
+- 🧮 **Loan Calculator**: Built-in LTV calculator
+- 🌙 **Dark Mode**: Full dark mode support
+- 🐳 **Docker Ready**: Easy deployment with Docker
+
+## 🚀 Quick Start
+
+1. Clone the repository:
 ```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
+git clone https://github.com/yourusername/pinnacle.git
+cd pinnacle
 ```
 
-## Developing
+2. Install dependencies:
+```bash
+npm install
+```
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+3. Copy `.env.local.example` to `.env.local` and fill in your API keys:
+```bash
+cp .env.local.example .env.local
+```
 
+4. Start the development server:
 ```bash
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+## 🐳 Docker Deployment
 
-To create a production version of your app:
-
+1. Build and run with Docker Compose:
 ```bash
-npm run build
+docker-compose up -d --build
 ```
 
-## Docker
+2. Access the application at `http://localhost:3000`
 
-To build a docker image of your app:
+## 🔑 Environment Variables
 
+Required environment variables:
+
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Google Maps API key for address autocomplete
+- `HUBSPOT_TOKEN`: HubSpot API token for CRM integration
+
+## 📦 Tech Stack
+
+- [Next.js 14](https://nextjs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [HubSpot API](https://developers.hubspot.com/)
+- [React Hook Form](https://react-hook-form.com/)
+- [Zod](https://zod.dev/)
+- [Lucide Icons](https://lucide.dev/)
+
+## 🧪 Testing
+
+Run the test suite:
 ```bash
-docker build . -t highergroundstudio/lenderify-frontend:3.4.0
-docker push highergroundstudio/lenderify-frontend:3.4.0
-
-docker build . -t highergroundstudio/lenderify-frontend:latest
-docker push highergroundstudio/lenderify-frontend:latest
+npm run test
 ```
 
-You can preview the production build with `npm run preview`.
+## 📝 License
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+MIT License - feel free to use this project for your own purposes!
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
