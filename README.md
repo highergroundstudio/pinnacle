@@ -1,6 +1,6 @@
 # 🏔 Pinnacle - Deal Management Platform
 
-A professional, modern deal management and folder creation platform built with Next.js 14, TypeScript, and Tailwind CSS.
+A professional, modern deal management and folder creation platform built with Next.js 15, TypeScript, and Tailwind CSS.
 
 ![Pinnacle Dashboard](https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2400&auto=format&fit=crop)
 

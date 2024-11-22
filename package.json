@@ -11,9 +11,10 @@
     "lint": "next lint",
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "docker-push-version": "docker build --tag highergroundstudio/pinnacle:v%npm_package_version% . && docker push highergroundstudio/pinnacle:v%npm_package_version%",
-    "docker-push-latest": "docker build --tag highergroundstudio/pinnacle . && docker push highergroundstudio/pinnacle",
-    "docker-push": "npm run docker-push-version && npm run docker-push-latest"
+    "docker-build-version": "docker build --tag highergroundstudio/pinnacle:v%npm_package_version% . && docker push highergroundstudio/pinnacle:v%npm_package_version%",
+    "docker-build-latest": "docker build --tag highergroundstudio/pinnacle . && docker push highergroundstudio/pinnacle:latest",
+    "docker-tag-latest": "docker tag highergroundstudio/pinnacle:v%npm_package_version% highergroundstudio/pinnacle:latest . && docker push highergroundstudio/pinnacle:latest",
+    "docker-push": "npm run docker-build-version && npm run docker-tag-latest"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
