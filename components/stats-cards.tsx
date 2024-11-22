@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, FileText, Mountain, Users } from "lucide-react";
+import { Building2, Mountain, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Stats {
@@ -96,10 +96,8 @@ function StatsCardsSkeleton() {
 			{Array(4)
 				.fill(0)
 				.map((_, i) => (
-					<Card
-						key={crypto.randomUUID()}
-						className="backdrop-blur-sm bg-card/50"
-					>
+					// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+					<Card key={i} className="backdrop-blur-sm bg-card/50">
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 							<Skeleton className="h-4 w-[100px]" />
 							<Skeleton className="h-4 w-4" />
