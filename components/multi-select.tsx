@@ -56,6 +56,7 @@ export function MultiSelect({
 			<PopoverTrigger asChild>
 				<Button
 					variant="outline"
+					// biome-ignore lint/a11y/useSemanticElements: <explanation>
 					role="combobox"
 					aria-expanded={open}
 					className="w-full justify-between hover:bg-background"
@@ -69,23 +70,16 @@ export function MultiSelect({
 								className="mr-1 flex items-center gap-1"
 							>
 								{item}
-								<div
-									role="button"
-									tabIndex={0}
+								<button
+									type="button"
 									className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
 									onClick={(e) => {
 										e.stopPropagation();
 										handleUnselect(item);
 									}}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
-											handleUnselect(item);
-										}
-									}}
 								>
 									<X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-								</div>
+								</button>
 							</Badge>
 						))}
 					</div>

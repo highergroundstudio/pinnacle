@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 
 interface AddressFormProps {
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	form: UseFormReturn<any>;
 	onAddressCheck: (street: string) => Promise<void>;
 	isChecking: boolean;

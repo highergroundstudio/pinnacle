@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { Client } from "@hubspot/api-client";
+import type {
+	SimplePublicObjectInputForCreate,
+	AssociationSpec,
+	PublicObjectSearchRequest,
+} from "@hubspot/api-client/lib/codegen/crm/deals";
+
 import { getFullStateName } from "@/lib/utils";
 
 const hubspotClient = new Client({
@@ -25,9 +31,12 @@ export async function POST(request: Request) {
 		}
 
 		// Create the deal in HubSpot
-		const deal = await hubspotClient.crm.deals.basicApi.create({
+		const dealInput: SimplePublicObjectInputForCreate = {
 			properties: body.properties,
-		});
+			associations: body.associations || [],
+		};
+
+		const deal = await hubspotClient.crm.deals.basicApi.create(dealInput);
 
 		// If there's a broker to associate
 		if (body.associations?.[0]?.to?.id) {
@@ -35,13 +44,13 @@ export async function POST(request: Request) {
 				const association = {
 					associationCategory: "HUBSPOT_DEFINED",
 					associationTypeId: 3, // dealToContact association type
-				};
+				} as AssociationSpec;
 
 				await hubspotClient.crm.associations.v4.basicApi.create(
 					"deals",
-					deal.id,
+					deal.id as string,
 					"contacts",
-					body.associations[0].to.id,
+					body.associations[0].to.id as string,
 					[association],
 				);
 			} catch (associationError) {
@@ -54,6 +63,7 @@ export async function POST(request: Request) {
 			id: deal.id,
 			dealUrl: `${process.env.NEXT_PUBLIC_HUBSPOT_URL}/deal/${deal.id}`,
 		});
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	} catch (error: any) {
 		console.error("HubSpot API error:", error);
 		return NextResponse.json(

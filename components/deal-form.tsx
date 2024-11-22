@@ -33,6 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 interface DealFormProps {
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	form: UseFormReturn<any>;
 }
 

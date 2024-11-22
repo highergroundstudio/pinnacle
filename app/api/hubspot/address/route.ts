@@ -70,6 +70,7 @@ export async function POST(request: Request) {
 				created: deal.properties.createdate ?? "",
 			})),
 		});
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	} catch (error: any) {
 		console.error("HubSpot API error:", error);
 		return NextResponse.json(

@@ -27,6 +27,7 @@ export default function NewDealPage() {
 	const [isBrokerSearching, setBrokerSearching] = useState(false);
 	const [isAddressChecking, setAddressChecking] = useState(false);
 	const [isPDFProcessing, setPDFProcessing] = useState(false);
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	const [matchingDeals, setMatchingDeals] = useState<any[]>([]);
 	const [createdDeal, setCreatedDeal] = useState<HubSpotDealResponse | null>(
 		null,
@@ -78,6 +79,7 @@ export default function NewDealPage() {
 					"Broker not found. Please fill in the details to create a new broker.",
 				);
 			}
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		} catch (error: any) {
 			toast.error(error.message);
 		} finally {
@@ -96,6 +98,7 @@ export default function NewDealPage() {
 				setMatchingDeals([]);
 				toast.success("Address is unique");
 			}
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		} catch (error: any) {
 			toast.error(error.message);
 		} finally {
@@ -144,6 +147,7 @@ export default function NewDealPage() {
 			}
 
 			toast.success("PDF processed successfully");
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		} catch (error: any) {
 			toast.error(error.message);
 		} finally {
@@ -199,6 +203,7 @@ export default function NewDealPage() {
 		toast.success("Test data loaded");
 	};
 
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	const onSubmit = async (data: any) => {
 		try {
 			setIsSubmitting(true);
@@ -220,6 +225,7 @@ export default function NewDealPage() {
 			);
 			form.reset();
 			setMatchingDeals([]);
+			// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		} catch (error: any) {
 			toast.error(error.message);
 		} finally {
@@ -267,11 +273,7 @@ export default function NewDealPage() {
 							</CardContent>
 						</Card>
 
-						<AddressList
-							form={form}
-							onAddressCheck={handleAddressCheck}
-							isChecking={isAddressChecking}
-						/>
+						<AddressList form={form} onAddressCheck={handleAddressCheck} />
 					</div>
 
 					<div className="space-y-6">

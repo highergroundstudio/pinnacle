@@ -1,4 +1,5 @@
 // Client-side functions that call the server API endpoints
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export async function searchBrokerByEmail(email: string): Promise<any> {
 	const response = await fetch("/api/hubspot/broker", {
 		method: "POST",
