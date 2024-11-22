@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  images: { 
+  experimental: {
+    cssChunking: 'loose', // default
+    useLightningcss: true,
+  },
+  images: {
     unoptimized: true,
     remotePatterns: [
       {
@@ -10,6 +14,6 @@ const nextConfig = {
       },
     ],
   }
-};
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig
