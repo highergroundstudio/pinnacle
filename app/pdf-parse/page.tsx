@@ -39,6 +39,7 @@ export default function PDFParsePage() {
 				const fields = await extractPDFContent(file);
 				setExtractedFields(fields);
 				toast.success("PDF processed successfully");
+				// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 			} catch (error: any) {
 				toast.error(error.message || "Failed to process PDF");
 			} finally {
@@ -245,6 +246,7 @@ export default function PDFParsePage() {
 								.split("\n")
 								.map((line, index) => (
 									<div
+										// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
 										key={index}
 										className={cn(
 											"text-sm",
