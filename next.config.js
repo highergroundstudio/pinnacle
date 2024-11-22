@@ -3,7 +3,6 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     cssChunking: 'loose', // default
-    useLightningcss: true,
   },
   images: {
     unoptimized: true,
