@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { Client } from "@hubspot/api-client";
-import { FilterOperatorEnum } from "@hubspot/api-client/lib/codegen/crm/deals";
-
 import type { PublicObjectSearchRequest } from "@hubspot/api-client/lib/codegen/crm/deals";
 
 const hubspotClient = new Client({
 	accessToken: process.env.HUBSPOT_TOKEN,
 });
 
-export async function POST(request: Request) {
+export async function GET() {
 	if (!process.env.HUBSPOT_TOKEN) {
 		return NextResponse.json(
 			{ error: "HubSpot token not configured" },
@@ -17,54 +15,57 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		const { street } = await request.json();
+		// Get total deals
+		const dealsResponse = await hubspotClient.crm.deals.basicApi.getPage(
+			undefined, // after
+			undefined, // before
+			[], // properties
+			undefined, // properties
+			undefined, // propertiesWithHistory
+			true, // archived
+		);
+		const totalDeals = dealsResponse.results.length;
 
-		if (!street) {
-			return NextResponse.json(
-				{ error: "Street address is required" },
-				{ status: 400 },
-			);
-		}
+		// Get active brokers (contacts with deals)
+		const brokersResponse = await hubspotClient.crm.contacts.basicApi.getPage(
+			undefined,
+			undefined,
+			[],
+			undefined,
+			undefined,
+			true,
+		);
+		const totalBrokers = brokersResponse.results.length;
 
+		// Calculate performance based on deal closure rate
 		const objectSearchRequest: PublicObjectSearchRequest = {
 			filterGroups: [
 				{
 					filters: [
 						{
-							propertyName: "property_address",
+							propertyName: "dealstage",
 							// @ts-ignore
-							operator: FilterOperatorEnum.ContainsToken,
-							value: street,
+							operator: "EQ",
+							value: "closedwon",
 						},
 					],
 				},
 			],
+			properties: [], // Add the required properties field
 			sorts: ["-createdate"], // Optional: Sort by createdate or other properties
-			properties: [
-				"dealname",
-				"amount",
-				"property_address",
-				"dealstage",
-				"createdate",
-			], // Customize the properties you want to retrieve
 			limit: 1, // Limit the number of results to 1 since we're looking for a single deal
 			after: "0", // Optional: Use this to paginate through results, starting from
 		};
-
-		// Search for deals in HubSpot with matching street address
-		const response =
+		const closedDealsResponse =
 			await hubspotClient.crm.deals.searchApi.doSearch(objectSearchRequest);
+		const closedDeals = closedDealsResponse.total;
+		const performance =
+			totalDeals > 0 ? Math.round((closedDeals / totalDeals) * 100) : 100;
 
 		return NextResponse.json({
-			exists: response.results.length > 0,
-			deals: response.results.map((deal) => ({
-				id: deal.id,
-				name: deal.properties.dealname ?? "",
-				address: deal.properties.property_address ?? "",
-				amount: deal.properties.amount ?? "",
-				stage: deal.properties.dealstage ?? "",
-				created: deal.properties.createdate ?? "",
-			})),
+			totalDeals,
+			totalBrokers,
+			performance,
 		});
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	} catch (error: any) {
