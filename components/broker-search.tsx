@@ -1,6 +1,6 @@
 "use client";
 
-import { UseFormReturn } from "react-hook-form";
+import type { UseFormReturn } from "react-hook-form";
 import { useState, useCallback, useEffect } from "react";
 import debounce from "lodash.debounce";
 import {
@@ -19,10 +19,16 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface BrokerSearchProps {
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	form: UseFormReturn<any>;
 	onSearch: (email: string) => Promise<void>;
 	isSearching: boolean;
 }
+
+const validateEmail = (email: string) => {
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	return emailRegex.test(email);
+};
 
 export function BrokerSearch({
 	form,
@@ -35,24 +41,26 @@ export function BrokerSearch({
 	const firstName = form.watch("broker.firstName");
 	const lastName = form.watch("broker.lastName");
 
-	const validateEmail = (email: string) => {
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return emailRegex.test(email);
-	};
-
 	const formatEmail = (email: string) => {
 		return email.replace(/^mailto:/, "").trim();
 	};
 
-	// Create a memoized debounced function
-	const debouncedSearch = useCallback(
-		debounce((email: string) => {
-			if (validateEmail(email)) {
-				onSearch(email);
+	const handleSearch = useCallback(
+		async (emailToSearch: string) => {
+			if (validateEmail(emailToSearch)) {
 				setIsTyping(false);
+				await onSearch(emailToSearch);
 			}
-		}, 1000),
+		},
 		[onSearch],
+	);
+
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const debouncedSearch = useCallback(
+		debounce((emailToSearch: string) => {
+			handleSearch(emailToSearch);
+		}, 1000),
+		[],
 	);
 
 	// Cleanup debounce on unmount
@@ -72,21 +80,17 @@ export function BrokerSearch({
 		}
 	};
 
-	const handleSearch = () => {
-		debouncedSearch.cancel(); // Cancel any pending debounced searches
-		const email = form.getValues("broker.email");
+	const handleManualSearch = () => {
 		if (!validateEmail(email)) {
 			toast.error("Please enter a valid email address");
 			return;
 		}
+		debouncedSearch.cancel(); // Cancel any pending debounced searches
 		setIsTyping(false);
-		onSearch(email);
+		handleSearch(email);
 	};
 
 	const handleCreateBroker = async () => {
-		const firstName = form.getValues("broker.firstName");
-		const lastName = form.getValues("broker.lastName");
-
 		if (!firstName || !lastName) {
 			toast.error("Please enter both first and last name");
 			return;
@@ -121,14 +125,14 @@ export function BrokerSearch({
 										onKeyDown={(e) => {
 											if (e.key === "Enter") {
 												e.preventDefault();
-												handleSearch();
+												handleManualSearch();
 											}
 										}}
 									/>
 								</FormControl>
 								<Button
 									type="button"
-									onClick={handleSearch}
+									onClick={handleManualSearch}
 									disabled={isSearching || !email}
 									className="w-24"
 								>
@@ -217,3 +221,5 @@ export function BrokerSearch({
 		</Form>
 	);
 }
+
+BrokerSearch.displayName = "BrokerSearch";

@@ -1,66 +1,50 @@
 "use client";
 
-import { forwardRef, useEffect, useRef, useState } from "react";
+import * as React from "react";
 import { Input } from "@/components/ui/input";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { cn } from "@/lib/utils";
+import { useLoadScript } from "@react-google-maps/api";
 
-interface AddressInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  onPlaceSelect?: (place: google.maps.places.PlaceResult) => void;
+interface AddressInputProps
+	extends React.InputHTMLAttributes<HTMLInputElement> {
+	onPlaceSelect?: (place: google.maps.places.PlaceResult) => void;
 }
 
-export const AddressInput = forwardRef<HTMLInputElement, AddressInputProps>(
-  ({ className, onPlaceSelect, ...props }, ref) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const autoCompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-    const inputRef = useRef<HTMLInputElement | null>(null);
+const libraries: "places"[] = ["places"];
 
-    useEffect(() => {
-      if (!window.google || !inputRef.current) return;
+const AddressInput = React.forwardRef<HTMLInputElement, AddressInputProps>(
+	({ onPlaceSelect, ...props }, ref) => {
+		const { isLoaded } = useLoadScript({
+			googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+			libraries,
+		});
 
-      autoCompleteRef.current = new window.google.maps.places.Autocomplete(
-        inputRef.current,
-        { types: ["address"], componentRestrictions: { country: "us" } }
-      );
+		React.useEffect(() => {
+			if (!isLoaded || !ref || typeof ref === "function") return;
 
-      autoCompleteRef.current.addListener("place_changed", () => {
-        if (!autoCompleteRef.current) return;
-        
-        const place = autoCompleteRef.current.getPlace();
-        onPlaceSelect?.(place);
-        setIsLoading(false);
-      });
+			const input = ref.current;
+			if (!input) return;
 
-      return () => {
-        if (autoCompleteRef.current) {
-          google.maps.event.clearInstanceListeners(autoCompleteRef.current);
-        }
-      };
-    }, [onPlaceSelect]);
+			const autocomplete = new google.maps.places.Autocomplete(input, {
+				types: ["address"],
+				componentRestrictions: { country: "us" },
+			});
 
-    return (
-      <div className="relative">
-        <Input
-          ref={(node) => {
-            // Handle both refs
-            if (typeof ref === "function") {
-              ref(node);
-            } else if (ref) {
-              ref.current = node;
-            }
-            inputRef.current = node;
-          }}
-          className={cn("pr-8", className)}
-          onFocus={() => setIsLoading(true)}
-          onBlur={() => setIsLoading(false)}
-          {...props}
-        />
-        {isLoading && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">
-            <LoadingSpinner size="sm" />
-          </div>
-        )}
-      </div>
-    );
-  }
+			autocomplete.addListener("place_changed", () => {
+				const place = autocomplete.getPlace();
+				if (onPlaceSelect) {
+					onPlaceSelect(place);
+				}
+			});
+
+			return () => {
+				google.maps.event.clearInstanceListeners(autocomplete);
+			};
+		}, [isLoaded, ref, onPlaceSelect]);
+
+		return <Input ref={ref} type="text" {...props} />;
+	},
 );
+
+AddressInput.displayName = "AddressInput";
+
+export { AddressInput };
