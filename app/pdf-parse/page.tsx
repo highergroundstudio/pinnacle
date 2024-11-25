@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Upload, Copy, RefreshCw, Mail, Check } from "lucide-react";
+import { Loader2, Upload, Copy, RefreshCw } from "lucide-react";
 import { extractPDFContent, type ParsedField } from "@/lib/pdf-parser";
 import {
 	Select,
@@ -17,12 +16,50 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+// Custom Hook with Fallback
+export function useCopyToClipboard() {
+	const [copiedText, setCopiedText] = useState<string | null>(null);
+
+	const copyToClipboard = async (text: string, isHtml = false) => {
+		try {
+			if (navigator.clipboard) {
+				if (isHtml) {
+					const blob = new Blob([text], { type: "text/html" });
+					const clipboardItem = new ClipboardItem({ "text/html": blob });
+					await navigator.clipboard.write([clipboardItem]);
+				} else {
+					await navigator.clipboard.writeText(text);
+				}
+			} else {
+				// Fallback for insecure contexts
+				const textArea = document.createElement("textarea");
+				textArea.value = text;
+				textArea.style.position = "fixed";
+				textArea.style.opacity = "0";
+				document.body.appendChild(textArea);
+				textArea.focus();
+				textArea.select();
+				document.execCommand("copy");
+				document.body.removeChild(textArea);
+			}
+			setCopiedText(text);
+			return true;
+		} catch (error) {
+			console.error("Failed to copy to clipboard:", error);
+			return false;
+		}
+	};
+
+	return [copiedText, copyToClipboard] as const;
+}
+
 type ViewMode = "lender" | "review";
 
 export default function PDFParsePage() {
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [extractedFields, setExtractedFields] = useState<ParsedField[]>([]);
 	const [viewMode, setViewMode] = useState<ViewMode>("lender");
+
 	const [copiedText, copyToClipboard] = useCopyToClipboard();
 
 	const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -37,102 +74,74 @@ export default function PDFParsePage() {
 				setIsProcessing(true);
 				const file = acceptedFiles[0];
 				const fields = await extractPDFContent(file);
-				setExtractedFields(fields);
+				setExtractedFields(fields); // Keep the order as extracted
 				toast.success("PDF processed successfully");
-				// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-			} catch (error: any) {
-				toast.error(error.message || "Failed to process PDF");
+			} catch (error: unknown) {
+				toast.error((error as Error).message || "Failed to process PDF");
 			} finally {
 				setIsProcessing(false);
 			}
 		},
 	});
 
-	const formatEmailContent = (asHtml = false) => {
-		const fieldOrder = [
-			"Deal Name",
-			"Loan Purpose",
-			"Property Type",
-			"Property Address",
-			"Current Value ($)",
-			"Property Size (Acres)",
-			"Number of Units",
-			"Property Description",
-			"Terms Requested (in Months)",
-			"List of Uses",
-			"Exit Strategy",
-			"Deadline Dates",
-			"Borrowing Entity Name",
-			"Owner Names",
-			"Owners' Combined Liquidity",
-			"Owners' Combined Net Worth",
-			"Owner Experience",
-			"Borrower Situation & File Notes",
-		];
+	// const filteredFields = extractedFields
+	// 	.filter(
+	// 		(field) =>
+	// 			field.value !== undefined &&
+	// 			field.value !== "" &&
+	// 			field.value !== "0" &&
+	// 			field.value !== "$0",
+	// 	)
+	// 	.map((field) => {
+	// 		if (field.name.toLowerCase().includes("$")) {
+	// 			const numericValue = Number(field.value);
+	// 			if (!Number.isNaN(numericValue)) {
+	// 				field.value = numericValue.toLocaleString("en-US", {
+	// 					style: "currency",
+	// 					currency: "USD",
+	// 					minimumFractionDigits: 0,
+	// 					maximumFractionDigits: 0,
+	// 				});
+	// 			}
+	// 		}
+	// 		return field;
+	// 	});
 
-		const sortedFields = [...extractedFields].sort((a, b) => {
-			const indexA = fieldOrder.indexOf(a.name);
-			const indexB = fieldOrder.indexOf(b.name);
-			if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
-			if (indexA === -1) return 1;
-			if (indexB === -1) return -1;
-			return indexA - indexB;
-		});
+	const preMessage =
+		"Please let me know your interest and terms in the following loan request: \n\n";
 
-		const fields =
-			viewMode === "review"
-				? sortedFields.filter((field) => !field.value)
-				: sortedFields;
-
-		if (viewMode === "review" && fields.length === 0) {
-			return asHtml
-				? "<div>All fields are filled out.</div>"
-				: "All fields are filled out.";
-		}
-
-		const title =
-			viewMode === "review"
-				? "Please provide the following information:"
-				: "Please let me know your interest and terms in the following loan request:";
-
-		if (asHtml) {
-			return `
-        <div id="parsedHTML" class="input p-4 bg-gray-100 rounded-md">
-          <div>${title}</div>
-          <br>
-          ${fields
-						.map(
-							({ name, value }) => `
-            <div><strong>${name}:</strong> ${value || "[Missing]"}</div>
-          `,
-						)
-						.join("")}
-        </div>
-      `.trim();
-		}
-
-		return [
-			title,
-			"",
-			...fields.map(({ name, value }) => `${name}: ${value || "[Missing]"}`),
-			"",
-		].join("\n");
+	const generateTextContent = () => {
+		return (
+			preMessage +
+			extractedFields.map(({ name, value }) => `${name}: ${value}\n`).join("")
+		);
 	};
 
-	const handleCopy = (asHtml = false) => {
-		const content = formatEmailContent(asHtml);
-		copyToClipboard(content);
-		toast.success(`Copied ${asHtml ? "HTML" : "text"} to clipboard`);
+	const generateHtmlContent = () => {
+		return `<div>${preMessage}</div><br>${extractedFields
+			.map(({ name, value }) => `<div><strong>${name}:</strong> ${value}</div>`)
+			.join("")}`;
 	};
 
-	const openEmail = () => {
-		const content = formatEmailContent(false);
-		const mailtoLink = `mailto:?subject=Loan Request Details&body=${encodeURIComponent(content)}`;
-		window.location.href = mailtoLink;
+	const handleCopyText = async () => {
+		const textContent = generateTextContent();
+		const success = await copyToClipboard(textContent);
+		if (success) toast.success("Copied text to clipboard");
 	};
 
-	const clearFields = () => {
-		setExtractedFields([]);
+	const handleCopyHtml = async () => {
+		const htmlContent = generateHtmlContent();
+		const success = await copyToClipboard(htmlContent, true);
+		if (success) toast.success("Copied HTML to clipboard");
+	};
+
+	const renderFields = () => {
+		return extractedFields.map(({ name, value }) => (
+			<div key={name} className="flex justify-between">
+				<span className="font-medium">{name}:</span>
+				<span>{viewMode === "lender" ? value : "[Missing]"}</span>
+			</div>
+		));
 	};
 
 	return (
@@ -156,7 +165,7 @@ export default function PDFParsePage() {
 						<div className="flex space-x-2">
 							<Button
 								variant="outline"
-								onClick={clearFields}
+								onClick={() => setExtractedFields([])}
 								className="flex items-center"
 							>
 								<RefreshCw className="mr-2 h-4 w-4" />
@@ -164,31 +173,19 @@ export default function PDFParsePage() {
 							</Button>
 							<Button
 								variant="outline"
-								onClick={() => handleCopy(false)}
+								onClick={handleCopyText}
 								className="flex items-center"
 							>
-								{copiedText ? (
-									<Check className="mr-2 h-4 w-4" />
-								) : (
-									<Copy className="mr-2 h-4 w-4" />
-								)}
+								<Copy className="mr-2 h-4 w-4" />
 								Copy Text
 							</Button>
 							<Button
 								variant="outline"
-								onClick={() => handleCopy(true)}
+								onClick={handleCopyHtml}
 								className="flex items-center"
 							>
-								{copiedText ? (
-									<Check className="mr-2 h-4 w-4" />
-								) : (
-									<Copy className="mr-2 h-4 w-4" />
-								)}
+								<Copy className="mr-2 h-4 w-4" />
 								Copy HTML
-							</Button>
-							<Button onClick={openEmail} className="flex items-center">
-								<Mail className="mr-2 h-4 w-4" />
-								Email
 							</Button>
 						</div>
 					)}
@@ -240,24 +237,7 @@ export default function PDFParsePage() {
 							{viewMode === "review" ? "Missing Fields" : "Extracted Fields"}
 						</CardTitle>
 					</CardHeader>
-					<CardContent>
-						<div className="space-y-4">
-							{formatEmailContent()
-								.split("\n")
-								.map((line, index) => (
-									<div
-										// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-										key={index}
-										className={cn(
-											"text-sm",
-											index === 0 ? "font-medium text-lg mb-4" : "font-mono",
-										)}
-									>
-										{line}
-									</div>
-								))}
-						</div>
-					</CardContent>
+					<CardContent className="space-y-2">{renderFields()}</CardContent>
 				</Card>
 			)}
 		</div>
